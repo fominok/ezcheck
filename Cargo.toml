@@ -1,0 +1,10 @@
+[package]
+name = "perms"
+version = "0.1.0"
+authors = ["Evgeny Fomin <fominok@hotmail.com>"]
+
+[dependencies]
+warp = "0.1.5"
+serde = "1.0"
+pretty_env_logger = "0.2.4"
+serde_derive = "1.0.79"
