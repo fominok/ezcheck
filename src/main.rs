@@ -61,6 +61,12 @@ fn main() {
         .and(db_filt.clone())
         .map(list_permissions);
 
+    let create_permission = warp::post2()
+        .and(permissions_index)
+        .and(warp::body::json())
+        .and(db_filt.clone())
+        .map(create_permission);
+
     let list_permission_values = warp::get2()
         .and(permission_values_index)
         .and(db_filt.clone())
@@ -68,6 +74,7 @@ fn main() {
 
     let api = list_permissions
         .or(list_permission_values)
+        .or(create_permission)
         .with(warp::log("api_log"));
 
     warp::serve(api)
@@ -76,6 +83,11 @@ fn main() {
 
 fn list_permissions(db: Db) -> impl warp::Reply {
     warp::reply::json(&db.lock().unwrap().perms)
+}
+
+fn create_permission(create: Permission, db: Db) -> impl warp::Reply {
+    db.lock().unwrap().perms.push(create);
+    Ok(StatusCode::CREATED)
 }
 
 fn list_permission_values(db: Db) -> impl warp::Reply {
