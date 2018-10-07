@@ -51,18 +51,24 @@ fn main() {
     let db_filt = warp::any().map(move || db.clone());
 
     let permissions = warp::path("permissions");
+    let permission_values = warp::path("permission_values");
 
     let permissions_index = permissions.and(warp::path::index());
+    let permission_values_index = permission_values.and(warp::path::index());
 
-    let list = warp::get2()
+    let list_permissions = warp::get2()
         .and(permissions_index)
         .and(db_filt.clone())
         .map(list_permissions);
 
-    // let hello = path!("hello" / String)
-    //     .map(|name| format!("Hello, {}!", name));
+    let list_permission_values = warp::get2()
+        .and(permission_values_index)
+        .and(db_filt.clone())
+        .map(list_permission_values);
 
-    let api = list.with(warp::log("api_log"));
+    let api = list_permissions
+        .or(list_permission_values)
+        .with(warp::log("api_log"));
 
     warp::serve(api)
         .run(([127, 0, 0, 1], 3030));
