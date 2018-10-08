@@ -1,7 +1,7 @@
 extern crate pretty_env_logger;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
-#[macro_use] extern crate warp;
+extern crate warp;
 
 use std::env;
 use std::sync::{Arc, Mutex};
@@ -33,6 +33,11 @@ struct PermissionValue {
 struct DbStruct {
     perms: Vec<Permission>,
     perm_vals: Vec<PermissionValue>
+}
+
+#[derive(Deserialize, Serialize)]
+struct CheckResponse {
+    exist: bool
 }
 
 type Db = Arc<Mutex<DbStruct>>;
@@ -72,7 +77,15 @@ fn main() {
         .and(db_filt.clone())
         .map(list_permission_values);
 
+    let create_permission_value = warp::post2()
+        .and(permission_values_index)
+        .and(warp::body::json())
+        .and(db_filt.clone())
+        .and_then(create_permission_value);
+
+
     let api = list_permissions
+        .or(create_permission_value)
         .or(list_permission_values)
         .or(create_permission)
         .with(warp::log("api_log"));
@@ -92,4 +105,15 @@ fn create_permission(create: Permission, db: Db) -> impl warp::Reply {
 
 fn list_permission_values(db: Db) -> impl warp::Reply {
     warp::reply::json(&db.lock().unwrap().perm_vals)
+}
+fn create_permission_value(create: PermissionValue, db: Db)
+                           -> Result<impl warp::Reply, warp::Rejection> {
+    let mut db_ref = db.lock().unwrap();
+    if let Some(_) = db_ref.perms.iter_mut()
+        .find(|p| p.name == create.permission_name) {
+            db_ref.perm_vals.push(create);
+            Ok(StatusCode::CREATED)
+        } else {
+            Err(warp::reject::reject())
+        }
 }

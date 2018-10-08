@@ -1,0 +1,51 @@
+# Vals
+
+:perms = http://localhost:3030/permissions
+:perm_vals = http://localhost:3030/permission_values
+
+
+# Permissions
+
+GET :perms
+
+
+# Create some permissions
+
+POST :perms
+Content-Type: application/json
+
+{
+    "name": "DocumentTerritory",
+    "value_type": "Dict",
+    "multiple": true
+}
+
+#
+
+POST :perms
+Content-Type: application/json
+
+{
+    "name": "ProformaManager",
+    "value_type": "Bool",
+    "multiple": false
+}
+
+
+# Permission values
+
+GET :perm_vals
+
+
+# Create some permission values
+
+POST :perm_vals
+Content-Type: application/json
+
+{
+    "permission_name": "ProformaManager",
+    "user": "evgeny",
+    "app": "rics"
+}
+
+#
