@@ -1,6 +1,8 @@
 extern crate pretty_env_logger;
 extern crate serde;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
 extern crate warp;
 
 use std::env;
@@ -11,33 +13,33 @@ use warp::{http::StatusCode, Filter};
 enum PermissionValueType {
     String,
     Bool,
-    Dict
+    Dict,
 }
 
 #[derive(Deserialize, Serialize)]
 struct Permission {
     name: String,
     value_type: PermissionValueType,
-    multiple: bool
+    multiple: bool,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct PermissionValue {
     permission_name: String,
     value: Option<String>,
     user: String,
-    app: String
+    app: String,
 }
 
 #[derive(Deserialize, Serialize)]
 struct DbStruct {
     perms: Vec<Permission>,
-    perm_vals: Vec<PermissionValue>
+    perm_vals: Vec<PermissionValue>,
 }
 
 #[derive(Deserialize, Serialize)]
 struct CheckResponse {
-    exist: bool
+    permit: bool,
 }
 
 type Db = Arc<Mutex<DbStruct>>;
@@ -48,9 +50,9 @@ fn main() {
     }
     pretty_env_logger::init();
 
-    let db = Arc::new(Mutex::new(DbStruct{
+    let db = Arc::new(Mutex::new(DbStruct {
         perms: Vec::new(),
-        perm_vals: Vec::new()
+        perm_vals: Vec::new(),
     }));
 
     let db_filt = warp::any().map(move || db.clone());
@@ -83,15 +85,19 @@ fn main() {
         .and(db_filt.clone())
         .and_then(create_permission_value);
 
+    let permission_check = path!("permission_check")
+        .and(warp::query::query())
+        .and(db_filt.clone())
+        .map(permission_check);
 
     let api = list_permissions
         .or(create_permission_value)
         .or(list_permission_values)
         .or(create_permission)
+        .or(permission_check)
         .with(warp::log("api_log"));
 
-    warp::serve(api)
-        .run(([127, 0, 0, 1], 3030));
+    warp::serve(api).run(([127, 0, 0, 1], 3030));
 }
 
 fn list_permissions(db: Db) -> impl warp::Reply {
@@ -106,14 +112,31 @@ fn create_permission(create: Permission, db: Db) -> impl warp::Reply {
 fn list_permission_values(db: Db) -> impl warp::Reply {
     warp::reply::json(&db.lock().unwrap().perm_vals)
 }
-fn create_permission_value(create: PermissionValue, db: Db)
-                           -> Result<impl warp::Reply, warp::Rejection> {
+
+fn create_permission_value(
+    create: PermissionValue,
+    db: Db,
+) -> Result<impl warp::Reply, warp::Rejection> {
     let mut db_ref = db.lock().unwrap();
-    if let Some(_) = db_ref.perms.iter_mut()
-        .find(|p| p.name == create.permission_name) {
-            db_ref.perm_vals.push(create);
-            Ok(StatusCode::CREATED)
-        } else {
-            Err(warp::reject::reject())
-        }
+    if let Some(_) = db_ref
+        .perms
+        .iter_mut()
+        .find(|p| p.name == create.permission_name)
+    {
+        db_ref.perm_vals.push(create);
+        Ok(StatusCode::CREATED)
+    } else {
+        Err(warp::reject::reject())
+    }
+}
+
+fn permission_check(check: PermissionValue, db: Db) -> impl warp::Reply {
+    let resp = db
+        .lock()
+        .unwrap()
+        .perm_vals
+        .iter()
+        .find(|&p| p == &check)
+        .is_some();
+    warp::reply::json(&CheckResponse { permit: resp })
 }

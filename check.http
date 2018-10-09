@@ -2,6 +2,7 @@
 
 :perms = http://localhost:3030/permissions
 :perm_vals = http://localhost:3030/permission_values
+:perm_check = http://localhost:3030/permission_check
 
 
 # Permissions
@@ -48,4 +49,14 @@ Content-Type: application/json
     "app": "rics"
 }
 
-#
+# Check one
+
+GET :perm_check?permission_name=ProformaManager&user=evgeny&app=rics
+
+# Check bad one
+
+GET :perm_check?permission_name=ProformaManager&user=john&app=rics
+
+# And another one
+
+GET :perm_check?permission_name=ProformaManager&user=evgeny&app=notrics
