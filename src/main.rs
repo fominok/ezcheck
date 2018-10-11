@@ -4,10 +4,14 @@ extern crate serde;
 extern crate serde_derive;
 #[macro_use]
 extern crate warp;
+extern crate serde_json;
+#[macro_use]
+extern crate log;
 
 use std::env;
 use std::sync::{Arc, Mutex};
 use warp::{http::StatusCode, Filter};
+use std::fs::File;
 
 #[derive(Deserialize, Serialize)]
 enum PermissionValueType {
@@ -44,9 +48,24 @@ struct CheckResponse {
 
 type Db = Arc<Mutex<DbStruct>>;
 
+fn read_defaults_to_db(filename: &str, db: Db) {
+    if let Ok(file) = File::open(filename) {
+        if let Ok(defaults) = serde_json::from_reader(file) {
+            let mut db_val = db.lock().unwrap();
+            *db_val = defaults;
+            info!("Permissions are loaded from {}", filename);
+        } else {
+            warn!("{} found found, but format is wrong", filename);
+        }
+    } else {
+        warn!("{} not found, starting with empty Db", filename);
+    }
+}
+
+
 fn main() {
     if env::var_os("RUST_LOG").is_none() {
-        env::set_var("RUST_LOG", "api_log=info");
+        env::set_var("RUST_LOG", "info");
     }
     pretty_env_logger::init();
 
@@ -54,6 +73,8 @@ fn main() {
         perms: Vec::new(),
         perm_vals: Vec::new(),
     }));
+
+    read_defaults_to_db("defaults.json", db.clone());
 
     let db_filt = warp::any().map(move || db.clone());
 

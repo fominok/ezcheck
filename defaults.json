@@ -1,0 +1,16 @@
+{
+    "perms": [
+	{
+	    "name": "ProformaManager",
+	    "value_type": "Bool",
+	    "multiple": false
+	}
+    ],
+    "perm_vals": [
+	{
+	    "permission_name": "ProformaManager",
+	    "user": "evgeny",
+	    "app": "rics"
+	}
+    ]
+}
